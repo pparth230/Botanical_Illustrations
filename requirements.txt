@@ -7,3 +7,4 @@ controlnet_aux>=0.0.7
 safetensors>=0.3.1
 Pillow>=9.5.0
 xformers>=0.0.20
+peft>=0.7.0
