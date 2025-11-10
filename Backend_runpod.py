@@ -41,11 +41,11 @@ def load_models():
     print("Loading Canny detector...")
     canny_detector = CannyDetector()
     
-    print("Loading BLIP-2 for descriptions...")
-    from transformers import Blip2Processor, Blip2ForConditionalGeneration
-    blip_processor = Blip2Processor.from_pretrained("Salesforce/blip2-opt-2.7b")
-    blip_model = Blip2ForConditionalGeneration.from_pretrained(
-        "Salesforce/blip2-opt-2.7b",
+    print("Loading BLIP for descriptions...")
+    from transformers import BlipProcessor, BlipForConditionalGeneration
+    blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+    blip_model = BlipForConditionalGeneration.from_pretrained(
+        "Salesforce/blip-image-captioning-base",
         torch_dtype=torch.float16
     ).to("cuda")
     
@@ -85,20 +85,20 @@ def generate_botanical(sketch_base64):
         guidance_scale=7.5
     ).images[0]
     
-    # Generate botanical description using BLIP-2
+    # Generate botanical description using BLIP
     print("Generating botanical description...")
-    inputs_desc = blip_processor(image, text="Describe this botanical illustration in scientific detail:", return_tensors="pt").to("cuda", torch.float16)
-    generated_ids_desc = blip_model.generate(**inputs_desc, max_new_tokens=100)
-    description = blip_processor.decode(generated_ids_desc[0], skip_special_tokens=True)
+    inputs_desc = blip_processor(image, text="a botanical illustration with historical and geographical description:", return_tensors="pt").to("cuda", torch.float16)
+    generated_ids_desc = blip_model.generate(**inputs_desc, max_new_tokens=50)
+    description = blip_processor.decode(generated_ids_desc[0], skip_special_tokens=True).strip()
     
-    # Generate Latin plant name using BLIP-2
-    print("Generating plant name...")
-    inputs_name = blip_processor(image, text="What is the Latin botanical name for this plant?", return_tensors="pt").to("cuda", torch.float16)
+    # Generate simple caption for plant name
+    print("Generating plant caption...")
+    inputs_name = blip_processor(image, return_tensors="pt").to("cuda", torch.float16)
     generated_ids_name = blip_model.generate(**inputs_name, max_new_tokens=20)
     plant_name = blip_processor.decode(generated_ids_name[0], skip_special_tokens=True).strip()
     
-    # Fallback if BLIP-2 doesn't generate proper Latin name
-    if len(plant_name.split()) > 3 or not plant_name[0].isupper():
+    # Fallback: generate Latin-style name if caption is too generic
+    if len(plant_name.split()) > 3 or not plant_name[0].isupper() or len(plant_name.strip()) == 0:
         import random
         genus_options = ["Rosa", "Florensis", "Botanica", "Herbalis", "Plantae"]
         species_options = ["elegans", "magnifica", "pristina", "botanicus", "illustris"]
