@@ -53,29 +53,30 @@ def load_models():
     lora_cache = os.path.join(MODELS_CACHE_DIR, "century-botanical-illustration")
     
     print("Loading ControlNet...")
-    # Check if cached, otherwise download and cache
-    if os.path.exists(controlnet_cache):
-        print(f"  Loading from cache: {controlnet_cache}")
+    # Check if cached (verify config.json exists to ensure it's a valid model)
+    if os.path.exists(controlnet_cache) and os.path.exists(os.path.join(controlnet_cache, "config.json")):
+        print(f"  ✓ Loading from cache: {controlnet_cache}")
         controlnet = ControlNetModel.from_pretrained(
             controlnet_cache,
             torch_dtype=torch.float16,
             local_files_only=True
         )
     else:
-        print("  Downloading ControlNet (this may take a while)...")
+        print("  ⚠ Downloading ControlNet (this may take a while)...")
         controlnet = ControlNetModel.from_pretrained(
             "diffusers/controlnet-canny-sdxl-1.0",
             torch_dtype=torch.float16,
             cache_dir=MODELS_CACHE_DIR
         )
         # Save to specific cache location for faster loading next time
+        print(f"  Saving ControlNet to cache...")
         controlnet.save_pretrained(controlnet_cache)
-        print(f"  Cached to: {controlnet_cache}")
+        print(f"  ✓ Cached to: {controlnet_cache}")
     
     print("Loading SDXL pipeline...")
-    # Check if cached, otherwise download and cache
-    if os.path.exists(sdxl_cache):
-        print(f"  Loading from cache: {sdxl_cache}")
+    # Check if cached (verify model_index.json exists to ensure it's a valid model)
+    if os.path.exists(sdxl_cache) and os.path.exists(os.path.join(sdxl_cache, "model_index.json")):
+        print(f"  ✓ Loading from cache: {sdxl_cache}")
         pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
             sdxl_cache,
             controlnet=controlnet,
@@ -84,7 +85,7 @@ def load_models():
             local_files_only=True
         ).to(device)
     else:
-        print("  Downloading SDXL pipeline (this may take a while)...")
+        print("  ⚠ Downloading SDXL pipeline (this may take a while)...")
         pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
             "stabilityai/stable-diffusion-xl-base-1.0",
             controlnet=controlnet,
@@ -93,19 +94,36 @@ def load_models():
             cache_dir=MODELS_CACHE_DIR
         ).to(device)
         # Save to specific cache location
+        print(f"  Saving SDXL to cache...")
         pipe.save_pretrained(sdxl_cache)
-        print(f"  Cached to: {sdxl_cache}")
+        print(f"  ✓ Cached to: {sdxl_cache}")
     
     print("Loading botanical LoRA...")
-    # LoRA weights - check cache first
-    if os.path.exists(lora_cache):
-        print(f"  Loading LoRA from cache: {lora_cache}")
-        pipe.load_lora_weights(lora_cache, local_files_only=True)
-    else:
-        print("  Downloading LoRA weights (this may take a while)...")
+    # LoRA weights - try to load from cache, fallback to download
+    # Note: LoRA caching behavior varies by diffusers version
+    try:
+        if os.path.exists(lora_cache):
+            print(f"  Attempting to load LoRA from cache: {lora_cache}")
+            pipe.load_lora_weights(lora_cache, local_files_only=True)
+            print(f"  ✓ LoRA loaded from cache")
+        else:
+            raise FileNotFoundError("LoRA cache not found")
+    except (FileNotFoundError, Exception) as e:
+        print(f"  ⚠ LoRA not in cache or cache load failed, downloading...")
+        print(f"  Error: {str(e)}")
         pipe.load_lora_weights("KappaNeuro/century-botanical-illustration")
-        # Note: LoRA weights might need manual caching depending on the library version
-        print(f"  LoRA loaded (consider caching manually to: {lora_cache})")
+        # Try to save LoRA weights if possible
+        try:
+            # Some versions support saving LoRA weights
+            if hasattr(pipe, 'save_lora_weights'):
+                Path(lora_cache).mkdir(parents=True, exist_ok=True)
+                pipe.save_lora_weights(lora_cache)
+                print(f"  ✓ LoRA cached to: {lora_cache}")
+            else:
+                print(f"  Note: LoRA caching not supported in this diffusers version")
+        except Exception as save_error:
+            print(f"  Note: Could not cache LoRA: {str(save_error)}")
+        print(f"  ✓ LoRA loaded")
     
     print("Loading Canny detector...")
     canny_detector = CannyDetector()
