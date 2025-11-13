@@ -47,7 +47,19 @@ def load_models():
     # Ensure cache directory exists
     ensure_cache_dir()
     
-    # Set cache directories for HuggingFace models
+    # Set HuggingFace cache to use network volume directly
+    # This ensures all downloads go straight to network volume, not container disk
+    os.environ["HF_HOME"] = MODELS_CACHE_DIR
+    os.environ["TRANSFORMERS_CACHE"] = os.path.join(MODELS_CACHE_DIR, "transformers")
+    os.environ["HF_DATASETS_CACHE"] = os.path.join(MODELS_CACHE_DIR, "datasets")
+    # Set temp directory to network volume to avoid filling container disk
+    temp_dir = os.path.join(MODELS_CACHE_DIR, "tmp")
+    Path(temp_dir).mkdir(parents=True, exist_ok=True)
+    os.environ["TMPDIR"] = temp_dir
+    os.environ["TMP"] = temp_dir
+    os.environ["TEMP"] = temp_dir
+    
+    # Set cache directories for models
     controlnet_cache = os.path.join(MODELS_CACHE_DIR, "controlnet-canny-sdxl")
     sdxl_cache = os.path.join(MODELS_CACHE_DIR, "stable-diffusion-xl-base-1.0")
     lora_cache = os.path.join(MODELS_CACHE_DIR, "century-botanical-illustration")
@@ -63,15 +75,19 @@ def load_models():
         )
     else:
         print("  ⚠ Downloading ControlNet (this may take a while)...")
+        # Use cache_dir to download directly to network volume
+        # HuggingFace will cache automatically, no need for extra save_pretrained
         controlnet = ControlNetModel.from_pretrained(
             "diffusers/controlnet-canny-sdxl-1.0",
             torch_dtype=torch.float16,
             cache_dir=MODELS_CACHE_DIR
         )
-        # Save to specific cache location for faster loading next time
-        print(f"  Saving ControlNet to cache...")
-        controlnet.save_pretrained(controlnet_cache)
-        print(f"  ✓ Cached to: {controlnet_cache}")
+        # Try to save to organized location (skip if it fails due to space)
+        try:
+            controlnet.save_pretrained(controlnet_cache)
+            print(f"  ✓ Cached to: {controlnet_cache}")
+        except OSError as e:
+            print(f"  Note: Could not save to organized cache (models still cached by HuggingFace): {str(e)}")
     
     print("Loading SDXL pipeline...")
     # Check if cached (verify model_index.json exists to ensure it's a valid model)
@@ -86,6 +102,8 @@ def load_models():
         ).to(device)
     else:
         print("  ⚠ Downloading SDXL pipeline (this may take a while)...")
+        # Use cache_dir to download directly to network volume
+        # HuggingFace will cache automatically, no need for extra save_pretrained
         pipe = StableDiffusionXLControlNetPipeline.from_pretrained(
             "stabilityai/stable-diffusion-xl-base-1.0",
             controlnet=controlnet,
@@ -93,10 +111,12 @@ def load_models():
             safety_checker=None,
             cache_dir=MODELS_CACHE_DIR
         ).to(device)
-        # Save to specific cache location
-        print(f"  Saving SDXL to cache...")
-        pipe.save_pretrained(sdxl_cache)
-        print(f"  ✓ Cached to: {sdxl_cache}")
+        # Try to save to organized location (skip if it fails due to space)
+        try:
+            pipe.save_pretrained(sdxl_cache)
+            print(f"  ✓ Cached to: {sdxl_cache}")
+        except OSError as e:
+            print(f"  Note: Could not save to organized cache (models still cached by HuggingFace): {str(e)}")
     
     print("Loading botanical LoRA...")
     # LoRA weights - try to load from cache, fallback to download
