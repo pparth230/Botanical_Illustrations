@@ -12,38 +12,31 @@ A serverless API based AI interface that transforms hand-drawn sketches into det
 - **(Failed Attempt)Network Volume Caching**: Persistent model storage for fast cold starts
 - **Frontend Interface**- This is another big part, please feel free to ping me, if you want to know more about it
 
-## 🚀 RunPod Deployment
+## 🚀 Deployment System
 
-### Prerequisites
+I deployed this application on RunPod Serverless because of space and GPU constraints on my local Mac. Here's how the deployment system works:
 
-- RunPod account
-- Docker (for building images)
+### Deployment Workflow
 
-### Step 1: Build Docker Image
+1. **Clone the Repository**:Or directly connect your GitHub repository to RunPod (RunPod can build from source)
 
-```bash
-docker build -t botanical-illustration:latest .
-```
+2. **Create Serverless Endpoint**: In RunPod Dashboard, create a new serverless endpoint
 
-### Step 2: Push to Container Registry
+3. **Connect Git Repository**: Link your GitHub repository to the endpoint (RunPod can build from source)
 
-Push your image to Docker Hub, GitHub Container Registry, or another registry accessible to RunPod.
+4. **Configure Endpoint**: Set GPU type, environment variables, and optional network volume
 
-```bash
-docker tag botanical-illustration:latest yourusername/botanical-illustration:latest
-docker push yourusername/botanical-illustration:latest
-```
+5. **Deploy**: RunPod builds the Docker image from your repository and deploys the endpoint
 
-### Step 3: Create Network Volume (Optional)
+### Network Volume Setup (Optional - Failed Attempt)
 
-**Note on Network Volumes:**
-The code attempts to use network volumes to reduce cold start times by caching models persistently. However, **a reliable solution has not been found** due to limitations in how the SDXL pipeline and LoRA adapters handle model saving/loading.
+I attempted to use network volumes to reduce cold start times by caching models persistently. However, **I have not been able to find a reliable solution** due to limitations in how the SDXL pipeline and LoRA adapters handle model saving/loading.
 
-**Why This Matters:**
+**The Problem:**
 - Models are large (~10-12GB)
 - Without proper caching, they download on every cold start
 - The SDXL pipeline and LoRA adapter require modifications to their internal layers to be saved to a network volume
-- Current implementation uses HuggingFace's automatic caching, but this doesn't reliably persist across all scenarios
+- My current implementation uses HuggingFace's automatic caching, but this doesn't reliably persist across all scenarios
 
 **What This Means:**
 - **Models will still work** - the application functions correctly
@@ -59,21 +52,11 @@ The code attempts to use network volumes to reduce cold start times by caching m
    - **Size**: **25GB minimum** (50GB recommended)
    - **Region**: Choose the same region as your endpoint
 4. Click **"Create"**
-
-### Step 4: Create Serverless Endpoint
-
-1. Go to **RunPod Dashboard** → **Serverless** → **Endpoints**
-2. Click **"New Endpoint"**
-3. Configure:
-   - **Name**: Your endpoint name
-   - **Container Image**: `yourusername/botanical-illustration:latest`
-   - **GPU Type**: Select L4, RTX A5000, or RTX 3090
-4. Scroll to **"Advanced"** section
-5. (Optional) Under **"Network Volume"**, select your network volume
+5. When creating/editing your endpoint, go to **"Advanced"** section
+6. Under **"Network Volume"**, select your network volume
    - Mount path will automatically be `/runpod-volume`
-6. Click **"Save Endpoint"**
 
-### Step 5: Expected Behavior
+### Expected Behavior
 
 **First Request:**
 - Models download from HuggingFace Hub
@@ -158,6 +141,19 @@ See `requirements.txt` for Python dependencies. Key packages:
 - `transformers==4.35.2`
 - `controlnet-aux==0.0.7`
 - `runpod`
+
+## 🎨 Customizing the Prompt
+
+You can customize the generation prompt and negative prompt in `handler.py`. Here's where to find them:
+
+```137:139:handler.py
+    prompt = "botanical illustration of a plant, vintage scientific diagram, clean white background, detailed watercolor"
+    negative_prompt = "multiple plants, many flowers, bouquet, arrangement, group of plants, cluster, photo, realistic, modern, dark background, messy, text, border"
+```
+
+**Location**: Lines 137-139 in `handler.py`
+
+Modify these prompts to change the style, quality, or characteristics of the generated botanical illustrations.
 
 ## 🏗️ Architecture
 
