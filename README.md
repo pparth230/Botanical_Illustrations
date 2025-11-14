@@ -6,7 +6,8 @@ A serverless API based AI interface that transforms hand-drawn sketches into det
 
 - **Sketch-to-Illustration**: Convert simple doodles into detailed botanical illustrations
 - **ControlNet Integration**: Uses Canny edge detection to preserve sketch structure
-- **Botanical LoRA**: Specialized model trained on botanical illustrations
+- **SDXL**- Uses stable diffusion to generate the images
+- **Botanical LoRA**: Adapter by kappa neuro, trained on botanical illustrations.
 - **Serverless Architecture**: Deployed on RunPod because of space and gpu constraints on my local mac
 - **(Failed Attempt)Network Volume Caching**: Persistent model storage for fast cold starts
 - **Frontend Interface**- This is another big part, please feel free to ping me, if you want to know more about it
