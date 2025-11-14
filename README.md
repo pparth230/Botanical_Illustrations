@@ -1,14 +1,15 @@
 # Botanical Illustration Generator
 
-A serverless AI interface that transforms hand-drawn sketches into detailed botanical illustrations using Stable Diffusion XL, ControlNet, and a specialized botanical LoRA. Deployed on RunPod serverless.
+A serverless API based AI interface that transforms hand-drawn sketches into detailed botanical illustrations using Stable Diffusion XL, ControlNet, and a specialized botanical LoRA. Deployed on RunPod serverless.
 
 ## 🌿 Features
 
-- **Sketch-to-Illustration**: Convert simple line drawings into detailed botanical illustrations
+- **Sketch-to-Illustration**: Convert simple doodles into detailed botanical illustrations
 - **ControlNet Integration**: Uses Canny edge detection to preserve sketch structure
 - **Botanical LoRA**: Specialized model trained on botanical illustrations
-- **Serverless Architecture**: Deployed on RunPod for automatic scaling
-- **Network Volume Caching**: Persistent model storage for fast cold starts
+- **Serverless Architecture**: Deployed on RunPod because of space and gpu constraints on my local mac
+- **(Failed Attempt)Network Volume Caching**: Persistent model storage for fast cold starts
+- **Frontend Interface**- This is another big part, please feel free to ping me, if you want to know more about it
 
 ## 🚀 RunPod Deployment
 
